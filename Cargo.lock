@@ -73,8 +73,6 @@ name = "crate_glitch"
 version = "0.1.0"
 dependencies = [
  "glitch-in-the-matrix 0.14.0 (git+https://github.com/eeeeeta/glitch-in-the-matrix.git?branch=develop)",
- "hyper 0.12.35 (registry+https://github.com/rust-lang/crates.io-index)",
- "hyper-openssl 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

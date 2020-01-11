@@ -1,14 +1,12 @@
 use glitch_in_the_matrix::MatrixClient;
-use hyper::Client;
-use hyper_openssl::HttpsConnector;
 use tokio_core::reactor::Core;
 
 fn main() -> Result<(), std::io::Error> {
     let core = Core::new()?;
-    let https = HttpsConnector::new(10)?;
-    let client = Client::builder().build::<_, hyper::Body>(https);
+    // let https = HttpsConnector::new(10)?;
+    // let client = Client::builder().build::<_, hyper::Body>(https);
 
-    let fut = MatrixClient::login_password(
+    let _fut = MatrixClient::login_password(
         "crates.io".into(),
         "password".into(),
         "matrix.org",
