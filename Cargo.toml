@@ -7,4 +7,6 @@ edition = "2018"
 [dependencies]
 futures = "0.1.29"
 glitch-in-the-matrix = { git = "https://github.com/eeeeeta/glitch-in-the-matrix.git", branch = "develop" }
+gm-types = { git = "https://github.com/eeeeeta/glitch-in-the-matrix.git", branch = "develop" }
 tokio-core = "0.1.17"
+urlencoding = "1.0.0"
