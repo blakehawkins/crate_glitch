@@ -3,6 +3,12 @@ name = "crate_glitch"
 version = "0.1.0"
 authors = ["blakehawkins"]
 edition = "2018"
+license = "MIT OR Apache-2.0"
+description = "matrix.org bot to provide links based on pattern matching"
+homepage = "https://github.com/blakehawkins/crate_glitch"
+documentation = "https://docs.rs/crate_glitch/"
+repository = "https://github.com/blakehawkins/crate_glitch"
+readme = "README.md"
 
 [dependencies]
 futures = "0.1.29"
