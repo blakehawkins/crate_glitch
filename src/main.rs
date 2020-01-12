@@ -1,8 +1,8 @@
 use std::env::args;
 
-use futures::future::{ok, AndThen, Future, FutureResult, IntoFuture, IntoStream};
+use futures::future::{ok, Future};
 use futures::stream;
-use futures::stream::{Flatten, Stream, StreamFuture, IterOk, IterResult};
+use futures::stream::Stream;
 use gm_types::content::Content;
 use gm_types::messages::Message;
 use gm_types::replies::SendReply;
@@ -15,14 +15,16 @@ use glitch_in_the_matrix::sync::SyncStream;
 use glitch_in_the_matrix::MatrixClient;
 use serde::{Serialize, Deserialize};
 use serde_yaml;
-use tokio_core::reactor::{Core, Handle};
+use tokio_core::reactor::Core;
 use urlencoding::encode;
 
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 struct Config {
     token: String,
     password: String,
+    room: String,
+    account: String,
 }
 
 
@@ -56,7 +58,7 @@ fn into_sends<T: MatrixRequestable + 'static>(
 }
 
 fn send_stream(
-    (mut client, room, handle): (MatrixClient, Room<'static>, Handle)
+    (mut client, room): (MatrixClient, Room<'static>)
 ) -> Box<dyn Stream<Item=impl Future<Item=SendReply, Error=()>, Error=MatrixError>> {
     Box::new(SyncStream::new(client.clone()).map(move |freply: SyncReply| {
         let mut rc = RoomClient { room: &room, cli: &mut client };
@@ -72,6 +74,7 @@ fn send_stream(
 }
 
 
+#[allow(unused_mut)]
 fn main() -> Result<(), std::io::Error> {
     let mut core = Core::new()?;
 
@@ -81,6 +84,7 @@ fn main() -> Result<(), std::io::Error> {
 
     let handle = core.handle();
     let handle2 = core.handle();
+    let rm = args.room.clone();
 
     let txns = MatrixClient::new_from_access_token(
         &args.token,
@@ -88,34 +92,35 @@ fn main() -> Result<(), std::io::Error> {
         &handle.clone()
     ).or_else(move |mut _e| {
         let handle2 = handle2.clone();
+        let args = args.clone();
 
         MatrixClient::login_password(
-            "crates.io".into(),
+            &args.account,
             &args.password,
             "https://matrix.org",
             &handle2
         )
     }).and_then(move |mut client| {
-        let handle = handle.clone();
+        let rm = rm.clone();
         
         println!("Access token: {}", client.get_access_token());
 
         NewRoom::from_alias(
             &mut client,
-            &encode("#_hack:matrix.org")
-        ).map(move |room| (client, room, handle))
+            &encode(&rm)
+        ).map(move |room| (client, room))
     })
     .into_stream()
     .map(send_stream)
     .map_err(|_| ());
 
     let handle = core.handle();
-
+ 
     let res = txns.for_each(move |mut syncs| {
         let handle = handle.clone();
 
-        syncs.map_err(|e| ()).for_each(move |txn| {
-            handle.spawn(txn.map(|v| ()).map_err(|e| ()));
+        syncs.map_err(|_e| { () }).for_each(move |txn| {
+            handle.spawn(txn.map(|_| ()));
 
             ok(())
         })
