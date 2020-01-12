@@ -25,25 +25,29 @@ struct Config {
     password: String,
     room: String,
     account: String,
+    listen_to: String,
+    prepend_with: String,
 }
 
 
 fn into_sends<T: MatrixRequestable + 'static>(
     jroom: &JoinedRoom,
-    room_client: &mut RoomClient<T>
+    room_client: &mut RoomClient<T>,
+    listen_to: String,
+    prepend_with: String,
 ) -> Vec<impl Future<Item=SendReply, Error=()> + 'static> {
     jroom.timeline.events.iter().map(move |event| {
         match &event.content {
             Content::RoomMessage(message) => {
                 match message {
                     Message::Text { body, formatted_body: _, format: _ } => {
-                        if body.starts_with("!crate ") {
-                            let crate_name = &body[7..];
+                        if body.starts_with(&listen_to) {
+                            let crate_name = &body[listen_to.len()..];
 
                             println!("{}", crate_name);
 
                             Some(room_client.send_simple(
-                                format!("https://crates.io/crates/{}", crate_name)
+                                format!("{}{}", prepend_with, crate_name)
                             ).map_err(|e| { println!("{}", e); () }))
                         } else {
                             None
@@ -58,13 +62,15 @@ fn into_sends<T: MatrixRequestable + 'static>(
 }
 
 fn send_stream(
-    (mut client, room): (MatrixClient, Room<'static>)
+    (mut client, room): (MatrixClient, Room<'static>),
+    listen_to: String,
+    prepend_with: String,
 ) -> Box<dyn Stream<Item=impl Future<Item=SendReply, Error=()>, Error=MatrixError>> {
     Box::new(SyncStream::new(client.clone()).map(move |freply: SyncReply| {
         let mut rc = RoomClient { room: &room, cli: &mut client };
 
         let futs = if let Some(jroom) = freply.rooms.join.get(&room) {
-            into_sends(jroom, &mut rc)
+            into_sends(jroom, &mut rc, listen_to.clone(), prepend_with.clone())
         } else {
             vec![]
         };
@@ -81,6 +87,7 @@ fn main() -> Result<(), std::io::Error> {
     let args: Config = serde_yaml::from_reader(
         std::fs::File::open(args().nth(1).unwrap_or("config.yaml".into()))?
     ).expect("Config file was not deserialisable.");
+    let args2 = args.clone();
 
     let handle = core.handle();
     let handle2 = core.handle();
@@ -111,7 +118,11 @@ fn main() -> Result<(), std::io::Error> {
         ).map(move |room| (client, room))
     })
     .into_stream()
-    .map(send_stream)
+    .map(move |pair| {
+        let args2 = args2.clone();
+
+        send_stream(pair, args2.listen_to, args2.prepend_with)
+    })
     .map_err(|_| ());
 
     let handle = core.handle();
