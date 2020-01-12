@@ -26,7 +26,10 @@ struct Config {
 }
 
 
-fn into_sends<T: MatrixRequestable + 'static>(jroom: &JoinedRoom, room_client: &mut RoomClient<T>) -> Vec<impl Future<Item=SendReply, Error=()> + 'static> {
+fn into_sends<T: MatrixRequestable + 'static>(
+    jroom: &JoinedRoom,
+    room_client: &mut RoomClient<T>
+) -> Vec<impl Future<Item=SendReply, Error=()> + 'static> {
     jroom.timeline.events.iter().map(move |event| {
         match &event.content {
             Content::RoomMessage(message) => {
@@ -52,7 +55,9 @@ fn into_sends<T: MatrixRequestable + 'static>(jroom: &JoinedRoom, room_client: &
     }).filter_map(|f| f).collect()
 }
 
-fn send_stream((mut client, room, handle): (MatrixClient, Room<'static>, Handle)) -> Box<dyn Stream<Item=impl Future<Item=SendReply, Error=()>, Error=MatrixError>> {
+fn send_stream(
+    (mut client, room, handle): (MatrixClient, Room<'static>, Handle)
+) -> Box<dyn Stream<Item=impl Future<Item=SendReply, Error=()>, Error=MatrixError>> {
     Box::new(SyncStream::new(client.clone()).map(move |freply: SyncReply| {
         let mut rc = RoomClient { room: &room, cli: &mut client };
 
@@ -64,15 +69,6 @@ fn send_stream((mut client, room, handle): (MatrixClient, Room<'static>, Handle)
         
         stream::iter_ok(futs.into_iter())
     }).flatten())
-        
-//        st.map_err(|_: MatrixError| ()).for_each(move |f| {
-//            let handle = handle.clone();
-//
-//            handle.spawn(f.map(|_| ()).map_err(|_| ()));
-//
-//            ok(())
-//        })
-
 }
 
 
@@ -123,9 +119,6 @@ fn main() -> Result<(), std::io::Error> {
 
             ok(())
         })
-        // handle.spawn(syncs.into_future());
-        
-        // ok(())
     });
 
     core.run(res).expect("Failed to run txns");
