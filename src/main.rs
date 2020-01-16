@@ -35,7 +35,7 @@ fn into_sends<T: MatrixRequestable + 'static>(
     room_client: &mut RoomClient<T>,
     listen_to: String,
     prepend_with: String,
-) -> Vec<impl Future<Item=SendReply, Error=()> + 'static> {
+) -> Vec<impl Future<Item=SendReply, Error=MatrixError> + 'static> {
     jroom.timeline.events.iter().map(move |event| {
         match &event.content {
             Content::RoomMessage(message) => {
@@ -48,7 +48,7 @@ fn into_sends<T: MatrixRequestable + 'static>(
 
                             Some(room_client.send_simple(
                                 format!("{}{}", prepend_with, crate_name)
-                            ).map_err(|e| { println!("{}", e); () }))
+                            ).map_err(|e| { println!("{}", e); e }))
                         } else {
                             None
                         }
@@ -65,7 +65,7 @@ fn send_stream(
     (mut client, room): (MatrixClient, Room<'static>),
     listen_to: String,
     prepend_with: String,
-) -> Box<dyn Stream<Item=impl Future<Item=SendReply, Error=()>, Error=MatrixError>> {
+) -> Box<dyn Stream<Item=impl Future<Item=SendReply, Error=MatrixError>, Error=MatrixError>> {
     Box::new(SyncStream::new(client.clone()).map(move |freply: SyncReply| {
         let mut rc = RoomClient { room: &room, cli: &mut client };
 
@@ -123,21 +123,21 @@ fn main() -> Result<(), std::io::Error> {
 
         send_stream(pair, args2.listen_to, args2.prepend_with)
     })
-    .map_err(|_| ());
+    .map_err(|e| println!("{:?}", e));
 
     let handle = core.handle();
  
     let res = txns.for_each(move |mut syncs| {
         let handle = handle.clone();
 
-        syncs.map_err(|_e| { () }).for_each(move |txn| {
-            handle.spawn(txn.map(|_| ()));
+        syncs.map_err(|e| { println!("{:?}", e) }).for_each(move |txn| {
+            handle.spawn(txn.map(|_| ()).map_err(|e| println!("{:?}", e)));
 
             ok(())
         })
     });
 
-    core.run(res).expect("Failed to run txns");
+    core.run(res).expect("Unresolved errors encountered.");
 
     Ok(())
 }
