@@ -48,7 +48,7 @@ fn into_sends<T: MatrixRequestable + 'static>(
 
                             Some(room_client.send_simple(
                                 format!("{}{}", prepend_with, crate_name)
-                            ).map_err(|e| { println!("{}", e); e }))
+                            ).map_err(|e| { println!("send_err: {}", e); e }))
                         } else {
                             None
                         }
@@ -123,15 +123,15 @@ fn main() -> Result<(), std::io::Error> {
 
         send_stream(pair, args2.listen_to, args2.prepend_with)
     })
-    .map_err(|e| println!("{:?}", e));
+    .map_err(|e| println!("send_stream err: {:?}", e));
 
     let handle = core.handle();
  
     let res = txns.for_each(move |mut syncs| {
         let handle = handle.clone();
 
-        syncs.map_err(|e| { println!("{:?}", e) }).for_each(move |txn| {
-            handle.spawn(txn.map(|_| ()).map_err(|e| println!("{:?}", e)));
+        syncs.map_err(|e| { println!("syncs_err: {:?}", e) }).for_each(move |txn| {
+            handle.spawn(txn.map(|_| ()).map_err(|e| println!("txn err: {:?}", e)));
 
             ok(())
         })
