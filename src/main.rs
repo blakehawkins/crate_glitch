@@ -139,9 +139,13 @@ fn main() -> Result<(), std::io::Error> {
         let handle = handle.clone();
 
         syncs
-            .map_err(|e| println!("syncs_err: {:?}", e))
             .for_each(move |txn| {
                 handle.spawn(txn.map(|_| ()).map_err(|e| println!("txn err: {:?}", e)));
+
+                ok(())
+            })
+            .or_else(|e| {
+                println!("syncs error: {:?}", e);
 
                 ok(())
             })
