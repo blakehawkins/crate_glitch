@@ -135,25 +135,31 @@ fn main() -> Result<(), std::io::Error> {
 
     let handle = core.handle();
 
-    let res = txns.for_each(move |mut syncs| {
-        let handle = handle.clone();
+    let res = txns
+        .for_each(move |mut syncs| {
+            let handle = handle.clone();
 
-        syncs
-            .for_each(move |txn| {
-                handle.spawn(txn.map(|_| ()).or_else(|e| {
-                    println!("txn err: {:?}", e);
+            syncs
+                .for_each(move |txn| {
+                    handle.spawn(txn.map(|_| ()).or_else(|e| {
+                        println!("txn err: {:?}", e);
+
+                        ok(())
+                    }));
 
                     ok(())
-                }));
+                })
+                .or_else(|e| {
+                    println!("syncs error: {:?}", e);
 
-                ok(())
-            })
-            .or_else(|e| {
-                println!("syncs error: {:?}", e);
+                    ok(())
+                })
+        })
+        .and_then(|_| {
+            println!("End of transactions");
 
-                ok(())
-            })
-    });
+            ok(())
+        });
 
     core.run(res).expect("Unresolved errors encountered.");
 
