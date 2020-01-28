@@ -10,7 +10,6 @@ use glitch_in_the_matrix::sync::SyncStream;
 use glitch_in_the_matrix::MatrixClient;
 use gm_types::content::Content;
 use gm_types::messages::Message;
-use gm_types::replies::SendReply;
 use gm_types::room::Room;
 use gm_types::sync::{JoinedRoom, SyncReply};
 use serde::{Deserialize, Serialize};
@@ -33,17 +32,14 @@ fn into_sends<T: MatrixRequestable + 'static>(
     room_client: &mut RoomClient<T>,
     listen_to: String,
     prepend_with: String,
-) -> Vec<impl Future<Item = SendReply, Error = MatrixError> + 'static> {
+) -> Vec<impl Future<Item = (), Error = MatrixError> + 'static> {
     jroom
         .timeline
         .events
         .iter()
         .filter_map(move |event| match &event.content {
             Content::RoomMessage(message) => match message {
-                Message::Text {
-                    body,
-                    ..
-                } => {
+                Message::Text { body, .. } => {
                     if body.starts_with(&listen_to) {
                         let crate_name = &body[listen_to.len()..];
 
@@ -52,9 +48,11 @@ fn into_sends<T: MatrixRequestable + 'static>(
                         Some(
                             room_client
                                 .send_simple(format!("{}{}", prepend_with, crate_name))
-                                .map_err(|e| {
+                                .and_then(|_| ok(()))
+                                .or_else(|e| {
                                     println!("send_err: {}", e);
-                                    e
+
+                                    ok(())
                                 }),
                         )
                     } else {
@@ -72,8 +70,7 @@ fn send_stream(
     (mut client, room): (MatrixClient, Room<'static>),
     listen_to: String,
     prepend_with: String,
-) -> Box<dyn Stream<Item = impl Future<Item = SendReply, Error = MatrixError>, Error = MatrixError>>
-{
+) -> Box<dyn Stream<Item = impl Future<Item = (), Error = MatrixError>, Error = MatrixError>> {
     Box::new(
         SyncStream::new(client.clone())
             .map(move |freply: SyncReply| {
@@ -108,30 +105,33 @@ fn main() -> Result<(), std::io::Error> {
     let handle2 = core.handle();
     let rm = args.room.clone();
 
-    let txns =
-        MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
-            .or_else(move |mut _e| {
-                let handle2 = handle2.clone();
+    let txns = MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
+        .or_else(move |mut _e| {
+            let handle2 = handle2.clone();
 
-                MatrixClient::login_password(
-                    &args.account,
-                    &args.password,
-                    "https://matrix.org",
-                    &handle2,
-                )
-            })
-            .and_then(move |mut client| {
-                println!("Access token: {}", client.get_access_token());
+            MatrixClient::login_password(
+                &args.account,
+                &args.password,
+                "https://matrix.org",
+                &handle2,
+            )
+        })
+        .and_then(move |mut client| {
+            println!("Access token: {}", client.get_access_token());
 
-                NewRoom::from_alias(&mut client, &encode(&rm)).map(move |room| (client, room))
-            })
-            .into_stream()
-            .map(move |pair| {
-                let args2 = args2.clone();
+            NewRoom::from_alias(&mut client, &encode(&rm)).map(move |room| (client, room))
+        })
+        .into_stream()
+        .map(move |pair| {
+            let args2 = args2.clone();
 
-                send_stream(pair, args2.listen_to, args2.prepend_with)
-            })
-            .map_err(|e| println!("send_stream err: {:?}", e));
+            send_stream(pair, args2.listen_to, args2.prepend_with)
+        })
+        .map_err(|e| {
+            println!("send_stream err: {:?}", e);
+
+            e
+        });
 
     let handle = core.handle();
 
@@ -140,7 +140,11 @@ fn main() -> Result<(), std::io::Error> {
 
         syncs
             .for_each(move |txn| {
-                handle.spawn(txn.map(|_| ()).map_err(|e| println!("txn err: {:?}", e)));
+                handle.spawn(txn.map(|_| ()).or_else(|e| {
+                    println!("txn err: {:?}", e);
+
+                    ok(())
+                }));
 
                 ok(())
             })
