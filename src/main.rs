@@ -14,7 +14,7 @@ use gm_types::room::Room;
 use gm_types::sync::{JoinedRoom, SyncReply};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
-use tokio_core::reactor::Core;
+use tokio_core::reactor::{Core, Handle};
 use urlencoding::encode;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -92,56 +92,51 @@ fn send_stream(
 }
 
 #[allow(unused_mut)]
-fn main() -> Result<(), std::io::Error> {
-    let mut core = Core::new()?;
-
-    let args: Config = serde_yaml::from_reader(std::fs::File::open(
-        args().nth(1).unwrap_or_else(|| "config.yaml".into()),
-    )?)
-    .expect("Config file was not deserialisable.");
+fn into_transactions(
+    handle: Handle,
+    args: Config,
+) -> impl Future<Item = futures::future::Loop<(), (Handle, Config)>, Error = MatrixError> {
+    let handle1 = handle.clone();
+    let handle2 = handle.clone();
+    let args1 = args.clone();
     let args2 = args.clone();
 
-    let handle = core.handle();
-    let handle2 = core.handle();
-    let rm = args.room.clone();
-
-    let txns = MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle)
+    MatrixClient::new_from_access_token(&args.token, "https://matrix.org", &handle.clone())
         .or_else(move |mut _e| {
-            let handle2 = handle2.clone();
+            let handle1 = handle1.clone();
 
             MatrixClient::login_password(
-                &args.account,
-                &args.password,
+                &args1.account,
+                &args1.password,
                 "https://matrix.org",
-                &handle2,
+                &handle1,
             )
         })
         .and_then(move |mut client| {
             println!("Access token: {}", client.get_access_token());
 
-            NewRoom::from_alias(&mut client, &encode(&rm)).map(move |room| (client, room))
+            NewRoom::from_alias(&mut client, &encode(&args2.room))
+                .map(move |room| (client, room, args2))
         })
         .into_stream()
-        .map(move |pair| {
-            let args2 = args2.clone();
-
-            send_stream(pair, args2.listen_to, args2.prepend_with)
+        .map(move |triple| {
+            send_stream(
+                (triple.0, triple.1),
+                triple.2.listen_to.clone(),
+                triple.2.prepend_with.clone(),
+            )
         })
         .map_err(|e| {
             println!("send_stream err: {:?}", e);
 
             e
-        });
-
-    let handle = core.handle();
-
-    let res = txns
+        })
         .for_each(move |mut syncs| {
-            let handle = handle.clone();
-
+            let handle2 = handle2.clone();
             syncs
                 .for_each(move |txn| {
-                    handle.spawn(txn.map(|_| ()).or_else(|e| {
+                    let handle2 = handle2.clone();
+                    handle2.spawn(txn.map(|_| ()).or_else(|e| {
                         println!("txn err: {:?}", e);
 
                         ok(())
@@ -155,13 +150,32 @@ fn main() -> Result<(), std::io::Error> {
                     ok(())
                 })
         })
-        .and_then(|_| {
+        .map_err(|e| {
+            println!("send_stream err: {:?}", e);
+
+            e
+        })
+        .and_then(|()| ok(futures::future::Loop::Continue((handle, args))))
+}
+
+fn main() -> Result<(), std::io::Error> {
+    let mut core = Core::new()?;
+
+    let args: Config = serde_yaml::from_reader(std::fs::File::open(
+        args().nth(1).unwrap_or_else(|| "config.yaml".into()),
+    )?)
+    .expect("Config file was not deserialisable.");
+
+    let retry_handler = futures::future::loop_fn((core.handle(), args), |(handle, args)| {
+        into_transactions(handle, args).and_then(|v| {
             println!("End of transactions");
 
-            ok(())
-        });
+            ok(v)
+        })
+    });
 
-    core.run(res).expect("Unresolved errors encountered.");
+    core.run(retry_handler)
+        .expect("Unresolved errors encountered.");
 
     Ok(())
 }
