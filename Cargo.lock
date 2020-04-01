@@ -70,7 +70,7 @@ dependencies = [
 
 [[package]]
 name = "crate_glitch"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "futures 0.1.29 (registry+https://github.com/rust-lang/crates.io-index)",
  "glitch-in-the-matrix 0.14.0 (registry+https://github.com/rust-lang/crates.io-index)",
