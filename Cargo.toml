@@ -12,8 +12,8 @@ readme = "README.md"
 
 [dependencies]
 futures = "0.1.29"
-glitch-in-the-matrix = { git = "https://github.com/eeeeeta/glitch-in-the-matrix.git", branch = "develop" }
-gm-types = { git = "https://github.com/eeeeeta/glitch-in-the-matrix.git", branch = "develop" }
+glitch-in-the-matrix = "0.14.0"
+gm-types = "0.4.0-pre"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
 tokio-core = "0.1.17"
