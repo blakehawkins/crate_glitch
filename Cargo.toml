@@ -1,8 +1,8 @@
 [package]
 name = "crate_glitch"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["blakehawkins"]
-edition = "2018"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "matrix.org bot to provide links based on pattern matching"
 homepage = "https://github.com/blakehawkins/crate_glitch"
@@ -11,10 +11,9 @@ repository = "https://github.com/blakehawkins/crate_glitch"
 readme = "README.md"
 
 [dependencies]
-futures = "0.1.29"
-glitch-in-the-matrix = "0.14.0"
-gm-types = "0.4.0-pre"
+anyhow = "1.0"
+matrix-sdk = "0.5.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.8"
-tokio-core = "0.1.17"
+tokio = { version = "1.20.1", features = ["full"] }
 urlencoding = "1.0.0"

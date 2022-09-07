@@ -7,9 +7,9 @@ Execute as `$ crate_glitch <config_file>` (default `config.yaml`), with config l
 ---
 token: ""
 password: ""
-account: "crates.io"
+account: "@crates.io:matrix.org"
 room: "#rust:matrix.org"
-listen_to: "!crate "
+listen_to: "!crate"
 prepend_with: "https://crates.io/crates/"
 ```
 
@@ -19,7 +19,3 @@ By default, the bot catches messages like `!crate serde` and provides a link to 
 Note:
 
 - The bot account must already be in the channel configured.
-- Login attempts to use the provided token, or falls back to password-auth if the token fails.
-  In either case, the service will print the token to stdout.
-  If you don't have a token, use password-auth and copy the emitted token into your config for next time.
-
