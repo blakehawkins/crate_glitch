@@ -71,9 +71,11 @@ async fn on_room_message(
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args: Config = serde_yaml::from_reader(std::fs::File::open(
-        args().nth(1).unwrap_or_else(|| "config.yaml".into()),
-    )?)
+    let config_file = args().nth(1).unwrap_or_else(|| "config.yaml".into());
+    let args: Config = serde_yaml::from_reader(
+        std::fs::File::open(&config_file)
+            .unwrap_or_else(|_| panic!("File not found -- {}", &config_file)),
+    )
     .expect("Config file was not deserialisable.");
 
     let account_name = args.clone().account;
