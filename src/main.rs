@@ -3,7 +3,7 @@ use std::env::args;
 use matrix_sdk::{
     config::SyncSettings,
     event_handler::Ctx,
-    room::{Joined, Room},
+    room::Room,
     ruma::{
         events::room::message::{
             MessageType, OriginalSyncRoomMessageEvent, RoomMessageEventContent,
@@ -11,7 +11,7 @@ use matrix_sdk::{
         },
         UserId,
     },
-    Client,
+    Client, RoomState,
 };
 
 use anyhow::{Context, Result};
@@ -27,11 +27,11 @@ struct Config {
     prepend_with: String,
 }
 
-async fn handle_listening_query(room: Joined, arg: String, args: &Config) -> Result<()> {
-    room.send(
-        RoomMessageEventContent::text_plain(format!("{}{}", args.prepend_with, arg)),
-        None,
-    )
+async fn handle_listening_query(room: Room, arg: String, args: &Config) -> Result<()> {
+    room.send(RoomMessageEventContent::text_plain(format!(
+        "{}{}",
+        args.prepend_with, arg
+    )))
     .await
     .unwrap();
 
@@ -55,7 +55,7 @@ async fn on_room_message(
     room: Room,
     args: Ctx<Config>,
 ) -> Result<()> {
-    if let Room::Joined(room) = room {
+    if room.state() == RoomState::Joined {
         let msg_body = match event.content.msgtype {
             MessageType::Text(TextMessageEventContent { body, .. }) => body,
             _ => return Ok(()),
@@ -88,6 +88,7 @@ async fn main() -> Result<()> {
     let password = args.clone().password;
 
     client
+        .matrix_auth()
         .login_username(&user, &password)
         .send()
         .await
@@ -99,9 +100,7 @@ async fn main() -> Result<()> {
     client.add_event_handler_context(args);
     client.add_event_handler(on_room_message);
 
-    client
-        .sync(SyncSettings::default().token(client.sync_token().await.unwrap()))
-        .await?;
+    client.sync(SyncSettings::default()).await?;
 
     Ok(())
 }

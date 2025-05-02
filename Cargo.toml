@@ -12,8 +12,8 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
-matrix-sdk = "0.6.0"
+matrix-sdk = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-tokio = { version = "1.20.1", features = ["full"] }
-urlencoding = "1.0.0"
+tokio = { version = "1.20", features = ["full"] }
+urlencoding = "1.0"
