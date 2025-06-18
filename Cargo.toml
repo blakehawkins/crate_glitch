@@ -15,5 +15,5 @@ anyhow = "1.0"
 matrix-sdk = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-tokio = { version = "1.20", features = ["full"] }
-urlencoding = "1.0"
+tokio = { version = "1.45", features = ["full"] }
+urlencoding = "2.1"
