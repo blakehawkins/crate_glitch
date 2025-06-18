@@ -1,0 +1,7 @@
+---
+token: ""
+password: ""
+account: "@xyz:matrix.org"
+room: "#room:matrix.org"
+listen_to: "!command"
+prepend_with: "https://crates.io/crates/"

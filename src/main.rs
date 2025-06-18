@@ -1,17 +1,17 @@
 use std::env::args;
 
 use matrix_sdk::{
+    Client, RoomState,
     config::SyncSettings,
     event_handler::Ctx,
     room::Room,
     ruma::{
+        UserId,
         events::room::message::{
             MessageType, OriginalSyncRoomMessageEvent, RoomMessageEventContent,
             TextMessageEventContent,
         },
-        UserId,
     },
-    Client, RoomState,
 };
 
 use anyhow::{Context, Result};

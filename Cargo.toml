@@ -2,7 +2,7 @@
 name = "crate_glitch"
 version = "0.2.0"
 authors = ["blakehawkins"]
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 description = "matrix.org bot to provide links based on pattern matching"
 homepage = "https://github.com/blakehawkins/crate_glitch"
@@ -12,7 +12,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1.0"
-matrix-sdk = "0.8"
+matrix-sdk = "0.9"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = { version = "1.45", features = ["full"] }
