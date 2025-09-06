@@ -72,7 +72,7 @@ async fn on_room_message(
 #[tokio::main]
 async fn main() -> Result<()> {
     let config_file = args().nth(1).unwrap_or_else(|| "config.yaml".into());
-    let args: Config = serde_yaml::from_reader(
+    let args: Config = serde_yml::from_reader(
         std::fs::File::open(&config_file)
             .unwrap_or_else(|_| panic!("File not found -- {}", &config_file)),
     )
