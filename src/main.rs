@@ -1,3 +1,4 @@
+#![recursion_limit = "256"]
 use std::env::args;
 
 use matrix_sdk::{

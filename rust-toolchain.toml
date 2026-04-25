@@ -1,0 +1,5 @@
+# TODO: Remove this pin when matrix-sdk > 0.16.0 is released.
+# This works around a Rust 1.94+ regression causing "queries overflow the depth limit!"
+# in the matrix-sdk crate.
+[toolchain]
+channel = "1.93.1"
